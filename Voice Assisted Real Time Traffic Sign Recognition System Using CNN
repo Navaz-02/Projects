@@ -1,0 +1,128 @@
+from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Convolution2D
+from keras.layers import MaxPooling2D
+from keras.layers import Flatten
+from keras.layers import Dense
+import numpy as np
+import cv2
+import imutils
+import pyttsx3
+
+train_datagen = ImageDataGenerator(shear_range=0.1,zoom_range=0.1,horizontal_flip=True)
+test_datagen = ImageDataGenerator()
+
+classifier = Sequential()
+classifier.add(Convolution2D(32, kernel_size=(3, 3), input_shape=(48, 48, 3), activation='relu'))
+classifier.add(MaxPooling2D(pool_size=(2, 2)))
+classifier.add(Convolution2D(32, kernel_size=(3, 3), activation='relu'))
+classifier.add(MaxPooling2D(pool_size=(2,2)))
+classifier.add(Flatten())
+#classifier.add(Dense(output_dim=128, activation='relu'))
+classifier.add(Dense(activation="relu", units=128))
+#classifier.add(Dense(output_dim= 40, activation='softmax'))
+classifier.add(Dense(activation="softmax", units=43))
+classifier.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+training_set = train_datagen.flow_from_directory('TrainIJCNN2013',
+                                               target_size=(48, 48),
+                                               batch_size=32,
+                                                 save_format='ppm',
+                                               class_mode='categorical',
+                                               shuffle=True)
+test_set = test_datagen.flow_from_directory('TrainIJCNN2013',
+                                          target_size=(48, 48),
+                                          batch_size=32,
+                                            save_format='ppm',
+                                          class_mode='categorical',
+                                          shuffle=False)
+#classifier.fit_generator(training_set,
+                         #steps_per_epoch=150,
+                         #epochs=50,
+                         #validation_data=test_set,
+                         #validation_steps=80)
+#classifier.save_weights('model_weights.h5')
+classifier.load_weights('model_weights.h5')
+#classifier.fit(
+        #training_set,
+        #steps_per_epoch=100,
+        #epochs=20,
+        #validation_data=test_set,
+        #validation_steps=50)
+#classifier.load_weights('model_weights2.h5')
+classes = { 0:' Speed limit (20km/h)' ,
+    1:' Speed limit (30km/h)' ,
+    2:' Speed limit (50km/h)' ,
+    3:' Speed limit (60km/h)' ,
+    4:' Speed limit (70km/h)' ,
+    5:' Speed limit (80km/h)' ,
+    6:' End of speed limit (80km/h)' ,
+    7:' Speed limit (100km/h)' ,
+    8:' Speed limit (120km/h)' ,
+    9:' No passing' ,
+    10:' No passing veh over 3.5 tons' ,
+    11:' Right-of-way at intersection' ,
+    12:' Priority road' ,
+    13:' Yield' ,
+    14:' Stop' ,
+    15:' No vehicles' ,
+    16:' Veh > 3.5 tons prohibited' ,
+    17:' No entry' ,
+    18:' General caution' ,
+    19:' Dangerous curve left' ,
+    20:' Dangerous curve right' ,
+    21:' Double curve' ,
+    22:' Bumpy road' ,
+    23:' Slippery road' ,
+    24:' Road narrows on the right' ,
+    25:' Road work' ,
+    26:' Traffic signals' ,
+    27:' Pedestrians' ,
+    28:' Children crossing' ,
+    29:' Bicycles crossing' ,
+    30:' Beware of ice/snow' ,
+    31:' Wild animals crossing' ,
+    32:' End speed + passing limits' ,
+    33:' Turn right ahead' ,
+    34:' Turn left ahead' ,
+    35:' Ahead only' ,
+    36:' Go straight or right' ,
+    37:' Go straight or left' ,
+    38:' Keep right' ,
+    39:' Keep left' ,
+    40:' Roundabout mandatory' ,
+    41:' End of no passing' ,
+    42:' End no passing veh > 3.5 tons'  }
+imagetest = image.load_img("testdata/00007.ppm", target_size=(48, 48))
+imagetest = image.img_to_array(imagetest)
+imagetest = np.expand_dims(imagetest, axis=0)
+pred = classifier.predict(imagetest)
+predict = np.argmax(pred)
+print(training_set.class_indices)
+global msg
+for x in classes.keys():
+    if predict == x:
+        msg=list(classes.values()) [list(classes.keys()).index(x)]
+data="Traffic Sign Recognized As "+msg
+print("predicted number: "+str(predict))
+engine = pyttsx3.init()
+engine.setProperty("rate", 150)
+engine.setProperty("volume", 1.0)
+engine.say(data)
+engine.runAndWait()
+imagedisplay = cv2.imread("testdata/00007.ppm")
+oring = imagedisplay.copy()
+output = imutils.resize(oring, width=400)
+cv2.imwrite("image.jpg", output)
+cv2.putText(output, msg, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+cv2.imshow("Predicted image result", output)
+cv2.waitKey(0)
+
+
+
+
+
+
+
+
